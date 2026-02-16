@@ -6,6 +6,7 @@ import {
   Code2,
   GitCommit,
   RefreshCw,
+  Activity,
 } from 'lucide-react';
 import { Card, CardHeader } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -138,54 +139,12 @@ export function DevelopmentHub() {
             <RefreshCw className="w-4 h-4" />
           </Button>
         </CardHeader>
-        <div className="space-y-3">
-          <div className="p-4 rounded-lg bg-[#232931]">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3">
-                <GitPullRequest className="w-5 h-5 text-blue-400 mt-0.5" />
-                <div>
-                  <h4 className="text-white font-medium">PR #234 opened</h4>
-                  <p className="text-sm text-slate-400 mt-1">
-                    "Add authentication flow" in company-os/main-app
-                  </p>
-                  <p className="text-xs text-slate-500 mt-2">2 hours ago</p>
-                </div>
-              </div>
-              <Badge variant="warning">Review Needed</Badge>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-lg bg-[#232931]">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3">
-                <Rocket className="w-5 h-5 text-emerald-400 mt-0.5" />
-                <div>
-                  <h4 className="text-white font-medium">Deployment succeeded</h4>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Production deployment of company-os/frontend
-                  </p>
-                  <p className="text-xs text-slate-500 mt-2">4 hours ago</p>
-                </div>
-              </div>
-              <Badge variant="success">Live</Badge>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-lg bg-[#232931]">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3">
-                <GitCommit className="w-5 h-5 text-purple-400 mt-0.5" />
-                <div>
-                  <h4 className="text-white font-medium">5 new commits</h4>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Pushed to main branch in company-os/backend
-                  </p>
-                  <p className="text-xs text-slate-500 mt-2">6 hours ago</p>
-                </div>
-              </div>
-              <Badge variant="neutral">Deployed</Badge>
-            </div>
-          </div>
+        <div className="text-center py-12">
+          <Activity className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+          <h3 className="text-white font-medium mb-2">No recent activity</h3>
+          <p className="text-slate-400 text-sm">
+            Pull requests, deployments, and commits will appear here as you work
+          </p>
         </div>
       </Card>
     </>

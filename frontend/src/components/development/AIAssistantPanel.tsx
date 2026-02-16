@@ -46,22 +46,7 @@ export function AIAssistantPanel() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [suggestions] = useState<Suggestion[]>([
-    {
-      id: '1',
-      type: 'refactor',
-      title: 'Extract Component',
-      description: 'This function could be extracted into a separate component',
-      code: 'export function UserProfile({ user }) { ... }',
-    },
-    {
-      id: '2',
-      type: 'optimization',
-      title: 'Use useMemo',
-      description: 'This calculation could be memoized to improve performance',
-      code: 'const total = useMemo(() => items.reduce(...), [items]);',
-    },
-  ]);
+  const [suggestions] = useState<Suggestion[]>([]);
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;

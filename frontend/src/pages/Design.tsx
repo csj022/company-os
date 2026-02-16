@@ -22,23 +22,15 @@ export function Design() {
               <Palette className="w-4 h-4" />
               <span>Figma</span>
             </div>
-            <Badge variant="success">Synced</Badge>
+            <Badge variant="neutral">Not Connected</Badge>
           </CardHeader>
-          <div className="space-y-3">
-            <div className="text-sm text-slate-300">
-              <div className="flex justify-between mb-1">
-                <span>Design Files</span>
-                <span className="text-white font-medium">8</span>
-              </div>
-              <div className="flex justify-between mb-1">
-                <span>Components</span>
-                <span className="text-white font-medium">124</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Last Sync</span>
-                <span className="text-emerald-400 font-medium">5m ago</span>
-              </div>
-            </div>
+          <div className="text-center py-8">
+            <p className="text-slate-400 text-sm mb-4">
+              Connect Figma to sync design files and components
+            </p>
+            <button className="px-4 py-2 rounded-lg bg-[#0176D3] hover:bg-[#015FB0] text-white text-sm transition-all">
+              Connect Figma
+            </button>
           </div>
         </Card>
 
@@ -49,23 +41,12 @@ export function Design() {
               <Component className="w-4 h-4" />
               <span>Component Library</span>
             </div>
-            <Badge variant="primary">v2.4.1</Badge>
+            <Badge variant="neutral">Coming Soon</Badge>
           </CardHeader>
-          <div className="space-y-3">
-            <div className="text-sm text-slate-300">
-              <div className="flex justify-between mb-1">
-                <span>React Components</span>
-                <span className="text-white font-medium">87</span>
-              </div>
-              <div className="flex justify-between mb-1">
-                <span>Design Tokens</span>
-                <span className="text-white font-medium">156</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Usage Coverage</span>
-                <span className="text-emerald-400 font-medium">94%</span>
-              </div>
-            </div>
+          <div className="text-center py-8">
+            <p className="text-slate-400 text-sm">
+              Component library stats will appear here
+            </p>
           </div>
         </Card>
 
@@ -76,23 +57,12 @@ export function Design() {
               <Layers className="w-4 h-4" />
               <span>Recent Updates</span>
             </div>
-            <Badge variant="warning">2 pending</Badge>
+            <Badge variant="neutral">Coming Soon</Badge>
           </CardHeader>
-          <div className="space-y-3">
-            <div className="text-sm text-slate-300">
-              <div className="flex justify-between mb-1">
-                <span>Design Changes</span>
-                <span className="text-amber-400 font-medium">2</span>
-              </div>
-              <div className="flex justify-between mb-1">
-                <span>Generated PRs</span>
-                <span className="text-white font-medium">1</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Awaiting Approval</span>
-                <span className="text-white font-medium">1</span>
-              </div>
-            </div>
+          <div className="text-center py-8">
+            <p className="text-slate-400 text-sm">
+              Design updates will appear here
+            </p>
           </div>
         </Card>
       </div>
