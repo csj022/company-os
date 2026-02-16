@@ -8,8 +8,11 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
-# Copy source code
+# Copy source code (includes prisma/)
 COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate
 
 # Expose port
 EXPOSE 3002
