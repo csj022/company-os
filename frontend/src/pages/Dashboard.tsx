@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Activity, GitPullRequest, Users, TrendingUp, RefreshCw, Inbox } from 'lucide-react';
+import { Activity, GitPullRequest, Users, RefreshCw, Inbox } from 'lucide-react';
 import { Card, CardHeader } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { StatusIndicator } from '../components/ui/StatusIndicator';
@@ -37,8 +37,8 @@ export function Dashboard() {
         api.get('/api/github/pull-requests?state=open').catch(() => ({ pullRequests: [] })),
       ]);
 
-      const deployments = deploymentsRes.deployments || [];
-      const pullRequests = prsRes.pullRequests || [];
+      const deployments = (deploymentsRes as any).deployments || [];
+      const pullRequests = (prsRes as any).pullRequests || [];
 
       setStats({
         deployments: { total: deployments.length },

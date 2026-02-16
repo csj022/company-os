@@ -4,7 +4,6 @@ import {
   GitPullRequest,
   Rocket,
   Code2,
-  GitCommit,
   RefreshCw,
   Activity,
 } from 'lucide-react';

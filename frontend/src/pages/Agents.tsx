@@ -1,4 +1,4 @@
-import { Bot, Activity, Sparkles } from 'lucide-react';
+import { Bot, Sparkles } from 'lucide-react';
 import { Card, CardHeader } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { StatusIndicator } from '../components/ui/StatusIndicator';
