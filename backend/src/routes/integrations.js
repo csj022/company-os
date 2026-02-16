@@ -55,15 +55,60 @@ router.get(
 /**
  * GET /api/integrations/:service/connect
  * Initiate OAuth flow for integration
+ * Accepts token via query param for browser redirects
  */
 router.get(
   '/:service/connect',
-  authenticate,
   [param('service').isIn(['github', 'vercel', 'figma', 'slack', 'twitter', 'linkedin'])],
   validate,
   async (req, res, next) => {
     try {
       const { service } = req.params;
+      const { token } = req.query;
+      
+      // Authenticate via token query param or Authorization header
+      let user;
+      if (token) {
+        const { verifyAccessToken } = require('../utils/jwt');
+        const decoded = verifyAccessToken(token);
+        if (!decoded) {
+          return res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Invalid token',
+          });
+        }
+        user = {
+          id: decoded.userId,
+          organizationId: decoded.organizationId,
+          role: decoded.role,
+        };
+      } else if (req.headers.authorization) {
+        // Use standard auth middleware logic
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          const bearerToken = authHeader.substring(7);
+          const { verifyAccessToken } = require('../utils/jwt');
+          const decoded = verifyAccessToken(bearerToken);
+          if (!decoded) {
+            return res.status(401).json({
+              error: 'Unauthorized',
+              message: 'Invalid token',
+            });
+          }
+          user = {
+            id: decoded.userId,
+            organizationId: decoded.organizationId,
+            role: decoded.role,
+          };
+        }
+      }
+      
+      if (!user) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Authentication required',
+        });
+      }
       
       if (service === 'github') {
         const clientId = process.env.GITHUB_CLIENT_ID;
@@ -76,8 +121,8 @@ router.get(
         
         // Generate state token (user ID + org ID for security)
         const state = Buffer.from(JSON.stringify({
-          userId: req.user.id,
-          organizationId: req.user.organizationId,
+          userId: user.id,
+          organizationId: user.organizationId,
         })).toString('base64');
         
         // GitHub OAuth scopes

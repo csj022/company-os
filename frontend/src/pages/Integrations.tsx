@@ -4,6 +4,7 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { api } from '../lib/api';
+import { useAuthStore } from '../store/authStore';
 
 interface Integration {
   id: string;
@@ -61,6 +62,7 @@ const integrationConfig = {
 };
 
 export function Integrations() {
+  const { token } = useAuthStore();
   const [integrations, setIntegrations] = useState<Record<string, Integration>>({});
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<Record<string, boolean>>({});
@@ -87,8 +89,9 @@ export function Integrations() {
 
   const handleConnect = async (service: string) => {
     try {
-      // Redirect to OAuth flow
-      window.location.href = `/api/integrations/${service}/connect`;
+      // Redirect to OAuth flow with token
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      window.location.href = `${apiBaseUrl}/integrations/${service}/connect?token=${encodeURIComponent(token || '')}`;
     } catch (error) {
       console.error(`Failed to connect ${service}:`, error);
     }
