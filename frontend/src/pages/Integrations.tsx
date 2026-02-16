@@ -90,7 +90,7 @@ export function Integrations() {
   const handleConnect = async (service: string) => {
     try {
       // Redirect to OAuth flow with token
-      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
       window.location.href = `${apiBaseUrl}/integrations/${service}/connect?token=${encodeURIComponent(token || '')}`;
     } catch (error) {
       console.error(`Failed to connect ${service}:`, error);

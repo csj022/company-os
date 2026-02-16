@@ -23,8 +23,28 @@ export function Signup() {
       return;
     }
 
-    // TODO: Implement actual signup
-    navigate('/login');
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Signup failed');
+      }
+
+      // Registration successful, redirect to login
+      navigate('/login');
+    } catch (err: any) {
+      setError(err.message || 'Failed to create account');
+    }
   };
 
   return (

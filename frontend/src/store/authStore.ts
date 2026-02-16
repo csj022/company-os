@@ -21,6 +21,8 @@ interface AuthState {
   setToken: (token: string) => void;
 }
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -29,24 +31,25 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
 
-      login: async (email: string, _password: string) => {
+      login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
-          // TODO: Implement actual API call
-          // const response = await api.post('/auth/login', { email, password });
-          
-          // Mock login for now
-          const mockUser: User = {
-            id: '1',
-            email,
-            name: 'Demo User',
-            role: 'admin',
-          };
-          const mockToken = 'mock-jwt-token';
+          const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Login failed');
+          }
+
+          const data = await response.json();
 
           set({
-            user: mockUser,
-            token: mockToken,
+            user: data.user,
+            token: data.accessToken,
             isAuthenticated: true,
             isLoading: false,
           });
