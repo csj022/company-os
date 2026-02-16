@@ -1,0 +1,189 @@
+# ============================================================================
+# CompanyOS .gitignore
+# ============================================================================
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Keep example files
+!.env.example
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Operating System
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDEs and Editors
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+*~
+.project
+.settings/
+.classpath
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# Prisma
+prisma/migrations/*.sql
+# Keep migration folder structure
+!prisma/migrations/.gitkeep
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Redis
+dump.rdb
+appendonly.aof
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.cache
+
+# Certificates and keys
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+
+# Secrets
+secrets/
+.secrets
+vault/
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Backup files
+*.backup
+*.bak
+*.old
+backup/
+
+# AWS
+.aws/
+
+# Local development
+.local/
+local/
+
+# Testing artifacts
+__tests__/__snapshots__/
+*.spec.js.snap
+*.test.js.snap
+
+# Package manager lock files (choose one)
+# Uncomment the ones you want to ignore:
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# TypeScript
+*.tsbuildinfo
+.tsbuildinfo
+
+# ESLint
+.eslintcache
+
+# Prettier
+.prettierignore
+
+# Build artifacts
+*.js.map
+*.css.map
+
+# Sentry
+.sentryclirc
+
+# Vercel
+.vercel
+
+# Local development overrides
+docker-compose.local.yml
+
+# Generated files
+generated/
+.generated/
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# Misc
+.turbo
+.nuxt
+.output
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.vscode-test
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Keep important files
+!.gitkeep

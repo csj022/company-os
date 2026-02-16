@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "CompanyOS Development",
+      "Group": "Local",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "companyos_dev",
+      "Username": "companyos",
+      "Password": "companyos_dev_password",
+      "SSLMode": "prefer",
+      "Comment": "CompanyOS development database"
+    }
+  }
+}

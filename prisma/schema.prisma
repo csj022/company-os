@@ -1,0 +1,437 @@
+// CompanyOS Database Schema
+// PostgreSQL + Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// CORE TABLES
+// ============================================================================
+
+model User {
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                 String                 @unique @db.VarChar(255)
+  name                  String                 @db.VarChar(255)
+  avatarUrl             String?                @map("avatar_url") @db.Text
+  role                  String                 @default("member") @db.VarChar(50) // admin, member, viewer
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastSeenAt            DateTime?              @map("last_seen_at") @db.Timestamptz(6)
+  settings              Json                   @default("{}") @db.JsonB
+  
+  // Relations
+  organizationMembers   OrganizationMember[]
+  createdDeployments    Deployment[]           @relation("DeploymentCreator")
+  approvedAgentTasks    AgentTask[]            @relation("AgentTaskApprover")
+  approvedSocialPosts   SocialPost[]           @relation("SocialPostApprover")
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Organization {
+  id              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String                 @db.VarChar(255)
+  slug            String                 @unique @db.VarChar(100)
+  logoUrl         String?                @map("logo_url") @db.Text
+  settings        Json                   @default("{}") @db.JsonB
+  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relations
+  members         OrganizationMember[]
+  integrations    Integration[]
+  repositories    Repository[]
+  deployments     Deployment[]
+  figmaFiles      FigmaFile[]
+  socialAccounts  SocialAccount[]
+  agents          Agent[]
+  events          Event[]
+  metrics         Metric[]
+
+  @@index([slug])
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String       @map("organization_id") @db.Uuid
+  userId          String       @map("user_id") @db.Uuid
+  role            String       @db.VarChar(50) // owner, admin, member
+  joinedAt        DateTime     @default(now()) @map("joined_at") @db.Timestamptz(6)
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+// ============================================================================
+// INTEGRATION TABLES
+// ============================================================================
+
+model Integration {
+  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String       @map("organization_id") @db.Uuid
+  service               String       @db.VarChar(50) // github, vercel, figma, slack, twitter, linkedin
+  status                String       @default("active") @db.VarChar(50) // active, inactive, error
+  credentialsEncrypted  String       @map("credentials_encrypted") @db.Text
+  metadata              Json         @default("{}") @db.JsonB
+  lastSyncAt            DateTime?    @map("last_sync_at") @db.Timestamptz(6)
+  createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  webhooks              Webhook[]
+
+  @@unique([organizationId, service])
+  @@index([organizationId])
+  @@index([service])
+  @@map("integrations")
+}
+
+model Webhook {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  integrationId String       @map("integration_id") @db.Uuid
+  service       String       @db.VarChar(50)
+  eventType     String       @map("event_type") @db.VarChar(100) // pull_request.opened, deployment.created, etc.
+  webhookId     String?      @map("webhook_id") @db.VarChar(255)
+  secret        String?      @db.VarChar(255)
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  
+  // Relations
+  integration   Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId])
+  @@map("webhooks")
+}
+
+// ============================================================================
+// DEVELOPMENT TABLES
+// ============================================================================
+
+model Repository {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String         @map("organization_id") @db.Uuid
+  githubId        BigInt         @unique @map("github_id")
+  name            String         @db.VarChar(255)
+  fullName        String         @map("full_name") @db.VarChar(255)
+  defaultBranch   String         @default("main") @map("default_branch") @db.VarChar(100)
+  visibility      String?        @db.VarChar(50) // public, private
+  metadata        Json           @default("{}") @db.JsonB
+  lastSyncAt      DateTime?      @map("last_sync_at") @db.Timestamptz(6)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  
+  // Relations
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pullRequests    PullRequest[]
+
+  @@index([organizationId])
+  @@index([githubId])
+  @@map("repositories")
+}
+
+model PullRequest {
+  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  repositoryId        String       @map("repository_id") @db.Uuid
+  githubId            BigInt       @unique @map("github_id")
+  number              Int
+  title               String       @db.Text
+  body                String?      @db.Text
+  state               String       @db.VarChar(50) // open, closed, merged
+  authorGithubId      BigInt?      @map("author_github_id")
+  baseBranch          String?      @map("base_branch") @db.VarChar(255)
+  headBranch          String?      @map("head_branch") @db.VarChar(255)
+  draft               Boolean      @default(false)
+  mergeable           Boolean?
+  reviewStatus        String?      @map("review_status") @db.VarChar(50) // pending, approved, changes_requested
+  agentReviewStatus   String?      @map("agent_review_status") @db.VarChar(50) // not_started, in_progress, completed
+  metadata            Json         @default("{}") @db.JsonB
+  openedAt            DateTime?    @map("opened_at") @db.Timestamptz(6)
+  closedAt            DateTime?    @map("closed_at") @db.Timestamptz(6)
+  mergedAt            DateTime?    @map("merged_at") @db.Timestamptz(6)
+  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relations
+  repository          Repository   @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@index([repositoryId])
+  @@index([state])
+  @@index([reviewStatus])
+  @@map("pull_requests")
+}
+
+model Deployment {
+  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId      String       @map("organization_id") @db.Uuid
+  vercelDeploymentId  String       @unique @map("vercel_deployment_id") @db.VarChar(255)
+  projectName         String       @map("project_name") @db.VarChar(255)
+  url                 String       @db.Text
+  state               String       @db.VarChar(50) // queued, building, ready, error, canceled
+  environment         String?      @db.VarChar(50) // production, preview, development
+  commitSha           String?      @map("commit_sha") @db.VarChar(255)
+  branch              String?      @db.VarChar(255)
+  creatorId           String?      @map("creator_id") @db.Uuid
+  agentChecked        Boolean      @default(false) @map("agent_checked")
+  healthScore         Int?         @map("health_score") // 0-100
+  metadata            Json         @default("{}") @db.JsonB
+  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  readyAt             DateTime?    @map("ready_at") @db.Timestamptz(6)
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator             User?        @relation("DeploymentCreator", fields: [creatorId], references: [id])
+
+  @@index([organizationId])
+  @@index([state])
+  @@index([vercelDeploymentId])
+  @@map("deployments")
+}
+
+// ============================================================================
+// DESIGN TABLES
+// ============================================================================
+
+model FigmaFile {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String            @map("organization_id") @db.Uuid
+  figmaFileKey    String            @unique @map("figma_file_key") @db.VarChar(255)
+  name            String            @db.VarChar(255)
+  fileType        String?           @map("file_type") @db.VarChar(50) // design_file, component_library
+  thumbnailUrl    String?           @map("thumbnail_url") @db.Text
+  lastModifiedAt  DateTime?         @map("last_modified_at") @db.Timestamptz(6)
+  metadata        Json              @default("{}") @db.JsonB
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relations
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  components      DesignComponent[]
+
+  @@index([organizationId])
+  @@index([figmaFileKey])
+  @@map("figma_files")
+}
+
+model DesignComponent {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  figmaFileId       String       @map("figma_file_id") @db.Uuid
+  figmaComponentId  String       @unique @map("figma_component_id") @db.VarChar(255)
+  name              String       @db.VarChar(255)
+  description       String?      @db.Text
+  componentType     String?      @map("component_type") @db.VarChar(100) // button, input, card, etc.
+  codeGenerated     Boolean      @default(false) @map("code_generated")
+  codePath          String?      @map("code_path") @db.Text
+  usageCount        Int          @default(0) @map("usage_count")
+  metadata          Json         @default("{}") @db.JsonB
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relations
+  figmaFile         FigmaFile    @relation(fields: [figmaFileId], references: [id], onDelete: Cascade)
+
+  @@index([figmaFileId])
+  @@index([componentType])
+  @@map("design_components")
+}
+
+// ============================================================================
+// SOCIAL TABLES
+// ============================================================================
+
+model SocialAccount {
+  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String       @map("organization_id") @db.Uuid
+  platform              String       @db.VarChar(50) // twitter, linkedin
+  accountId             String       @map("account_id") @db.VarChar(255)
+  handle                String       @db.VarChar(255)
+  displayName           String?      @map("display_name") @db.VarChar(255)
+  avatarUrl             String?      @map("avatar_url") @db.Text
+  followerCount         Int          @default(0) @map("follower_count")
+  credentialsEncrypted  String       @map("credentials_encrypted") @db.Text
+  active                Boolean      @default(true)
+  lastSyncAt            DateTime?    @map("last_sync_at") @db.Timestamptz(6)
+  createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  posts                 SocialPost[]
+
+  @@unique([organizationId, platform, accountId])
+  @@index([organizationId])
+  @@index([platform])
+  @@map("social_accounts")
+}
+
+model SocialPost {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  socialAccountId     String        @map("social_account_id") @db.Uuid
+  platform            String        @db.VarChar(50)
+  externalPostId      String?       @map("external_post_id") @db.VarChar(255)
+  content             String        @db.Text
+  status              String        @db.VarChar(50) // draft, scheduled, published, failed
+  scheduledFor        DateTime?     @map("scheduled_for") @db.Timestamptz(6)
+  publishedAt         DateTime?     @map("published_at") @db.Timestamptz(6)
+  engagementLikes     Int           @default(0) @map("engagement_likes")
+  engagementComments  Int           @default(0) @map("engagement_comments")
+  engagementShares    Int           @default(0) @map("engagement_shares")
+  engagementViews     Int           @default(0) @map("engagement_views")
+  agentGenerated      Boolean       @default(false) @map("agent_generated")
+  approvedBy          String?       @map("approved_by") @db.Uuid
+  metadata            Json          @default("{}") @db.JsonB
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relations
+  socialAccount       SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  approver            User?         @relation("SocialPostApprover", fields: [approvedBy], references: [id])
+
+  @@index([socialAccountId])
+  @@index([status])
+  @@index([scheduledFor])
+  @@map("social_posts")
+}
+
+// ============================================================================
+// AGENT TABLES
+// ============================================================================
+
+model Agent {
+  id                      String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId          String                @map("organization_id") @db.Uuid
+  name                    String                @db.VarChar(255)
+  agentType               String                @map("agent_type") @db.VarChar(100) // code_review, deployment, content, etc.
+  status                  String                @default("idle") @db.VarChar(50) // idle, working, error, disabled
+  capabilities            Json                  @default("[]") @db.JsonB
+  configuration           Json                  @default("{}") @db.JsonB
+  currentTaskId           String?               @map("current_task_id") @db.Uuid
+  totalTasksCompleted     Int                   @default(0) @map("total_tasks_completed")
+  successRate             Decimal               @default(100.00) @map("success_rate") @db.Decimal(5, 2)
+  averageDurationSeconds  Int?                  @map("average_duration_seconds")
+  lastActiveAt            DateTime?             @map("last_active_at") @db.Timestamptz(6)
+  createdAt               DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relations
+  organization            Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tasks                   AgentTask[]
+  primaryCollaborations   AgentCollaboration[]  @relation("PrimaryAgent")
+  secondaryCollaborations AgentCollaboration[]  @relation("CollaboratingAgent")
+
+  @@index([organizationId])
+  @@index([agentType])
+  @@index([status])
+  @@map("agents")
+}
+
+model AgentTask {
+  id                      String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agentId                 String                @map("agent_id") @db.Uuid
+  taskType                String                @map("task_type") @db.VarChar(100)
+  description             String?               @db.Text
+  status                  String                @default("pending") @db.VarChar(50) // pending, in_progress, completed, failed
+  priority                Int                   @default(5) // 1-10, higher = more urgent
+  inputData               Json?                 @map("input_data") @db.JsonB
+  outputData              Json?                 @map("output_data") @db.JsonB
+  errorMessage            String?               @map("error_message") @db.Text
+  startedAt               DateTime?             @map("started_at") @db.Timestamptz(6)
+  completedAt             DateTime?             @map("completed_at") @db.Timestamptz(6)
+  durationSeconds         Int?                  @map("duration_seconds")
+  retryCount              Int                   @default(0) @map("retry_count")
+  requiresHumanApproval   Boolean               @default(false) @map("requires_human_approval")
+  approvedBy              String?               @map("approved_by") @db.Uuid
+  approvedAt              DateTime?             @map("approved_at") @db.Timestamptz(6)
+  createdAt               DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relations
+  agent                   Agent                 @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  approver                User?                 @relation("AgentTaskApprover", fields: [approvedBy], references: [id])
+  collaborations          AgentCollaboration[]
+
+  @@index([agentId])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt(sort: Desc)])
+  @@map("agent_tasks")
+}
+
+model AgentCollaboration {
+  id                      String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  primaryAgentId          String       @map("primary_agent_id") @db.Uuid
+  collaboratingAgentId    String       @map("collaborating_agent_id") @db.Uuid
+  taskId                  String?      @map("task_id") @db.Uuid
+  collaborationType       String?      @map("collaboration_type") @db.VarChar(100) // handoff, parallel, review
+  status                  String       @default("active") @db.VarChar(50) // active, completed
+  metadata                Json         @default("{}") @db.JsonB
+  createdAt               DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  
+  // Relations
+  primaryAgent            Agent        @relation("PrimaryAgent", fields: [primaryAgentId], references: [id], onDelete: Cascade)
+  collaboratingAgent      Agent        @relation("CollaboratingAgent", fields: [collaboratingAgentId], references: [id], onDelete: Cascade)
+  task                    AgentTask?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([primaryAgentId])
+  @@index([collaboratingAgentId])
+  @@map("agent_collaborations")
+}
+
+// ============================================================================
+// ANALYTICS TABLES
+// ============================================================================
+
+model Event {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String       @map("organization_id") @db.Uuid
+  eventType       String       @map("event_type") @db.VarChar(100) // deployment.created, pr.opened, post.published, etc.
+  eventSource     String       @map("event_source") @db.VarChar(50) // github, vercel, slack, agent, user
+  actorType       String?      @map("actor_type") @db.VarChar(50) // user, agent, webhook
+  actorId         String?      @map("actor_id") @db.Uuid
+  resourceType    String?      @map("resource_type") @db.VarChar(100) // pull_request, deployment, post, etc.
+  resourceId      String?      @map("resource_id") @db.Uuid
+  metadata        Json         @default("{}") @db.JsonB
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([eventType])
+  @@index([eventSource])
+  @@index([createdAt(sort: Desc)])
+  @@map("events")
+}
+
+model Metric {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String       @map("organization_id") @db.Uuid
+  metricType      String       @map("metric_type") @db.VarChar(100) // deployment_frequency, pr_merge_time, etc.
+  value           Decimal      @db.Decimal(12, 2)
+  unit            String?      @db.VarChar(50) // seconds, count, percentage
+  dimensions      Json         @default("{}") @db.JsonB // tags for filtering
+  recordedAt      DateTime     @default(now()) @map("recorded_at") @db.Timestamptz(6)
+  
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([metricType])
+  @@index([recordedAt(sort: Desc)])
+  @@map("metrics")
+}
