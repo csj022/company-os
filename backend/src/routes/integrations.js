@@ -53,30 +53,129 @@ router.get(
 );
 
 /**
- * POST /api/integrations/:service/connect
+ * GET /api/integrations/:service/connect
  * Initiate OAuth flow for integration
  */
-router.post(
+router.get(
   '/:service/connect',
   authenticate,
-  authorize('owner', 'admin', 'member'),
   [param('service').isIn(['github', 'vercel', 'figma', 'slack', 'twitter', 'linkedin'])],
   validate,
   async (req, res, next) => {
     try {
       const { service } = req.params;
       
-      // Implementation would redirect to OAuth URL
-      // For now, return placeholder
-      res.json({
-        message: `OAuth flow for ${service} not yet implemented`,
-        service,
-      });
+      if (service === 'github') {
+        const clientId = process.env.GITHUB_CLIENT_ID;
+        if (!clientId) {
+          return res.status(500).json({
+            error: 'Configuration Error',
+            message: 'GitHub OAuth not configured',
+          });
+        }
+        
+        // Generate state token (user ID + org ID for security)
+        const state = Buffer.from(JSON.stringify({
+          userId: req.user.id,
+          organizationId: req.user.organizationId,
+        })).toString('base64');
+        
+        // GitHub OAuth scopes
+        const scopes = ['repo', 'read:user', 'read:org', 'admin:repo_hook'].join(' ');
+        
+        // Redirect to GitHub OAuth
+        const authUrl = `https://github.com/login/oauth/authorize?` +
+          `client_id=${clientId}&` +
+          `redirect_uri=${encodeURIComponent(process.env.GITHUB_CALLBACK_URL || `${process.env.BACKEND_URL}/api/integrations/github/callback`)}&` +
+          `scope=${encodeURIComponent(scopes)}&` +
+          `state=${state}`;
+        
+        res.redirect(authUrl);
+      } else {
+        res.json({
+          message: `OAuth flow for ${service} not yet implemented`,
+          service,
+        });
+      }
     } catch (error) {
       next(error);
     }
   }
 );
+
+/**
+ * GET /api/integrations/github/callback
+ * Handle GitHub OAuth callback
+ */
+router.get('/github/callback', async (req, res, next) => {
+  try {
+    const { code, state } = req.query;
+    
+    if (!code || !state) {
+      return res.redirect(`${process.env.FRONTEND_URL}?error=oauth_failed`);
+    }
+    
+    // Verify state and extract user info
+    let userInfo;
+    try {
+      userInfo = JSON.parse(Buffer.from(state, 'base64').toString());
+    } catch (error) {
+      return res.redirect(`${process.env.FRONTEND_URL}?error=invalid_state`);
+    }
+    
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+      }),
+    });
+    
+    const tokenData = await tokenResponse.json();
+    
+    if (tokenData.error || !tokenData.access_token) {
+      return res.redirect(`${process.env.FRONTEND_URL}?error=token_exchange_failed`);
+    }
+    
+    // Get GitHub user info
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`,
+        'Accept': 'application/json',
+      },
+    });
+    
+    const githubUser = await userResponse.json();
+    
+    // Store integration
+    await integrationService.upsert(
+      userInfo.organizationId,
+      'github',
+      {
+        accessToken: tokenData.access_token,
+        tokenType: tokenData.token_type,
+        scope: tokenData.scope,
+      },
+      {
+        username: githubUser.login,
+        email: githubUser.email,
+        avatarUrl: githubUser.avatar_url,
+        githubId: githubUser.id,
+      }
+    );
+    
+    // Redirect back to frontend with success
+    res.redirect(`${process.env.FRONTEND_URL}/integrations?success=github_connected`);
+  } catch (error) {
+    next(error);
+  }
+});
 
 /**
  * DELETE /api/integrations/:service/disconnect
